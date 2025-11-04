@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTTP Performance Evaluator</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.visualization-section {
+    margin: 30px 0;
+    min-height: 400px;
+    position: relative;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.chart-wrapper {
+    height: 400px;
+    width: 100%;
+}
+
+.loader-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    border-radius: 8px;
+}
+
+.loader {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 5px solid #3498db;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.benchmark-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.benchmark-form input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.benchmark-form input[type="number"] {
+    width: 80px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.benchmark-btn {
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.results-section {
+    margin-top: 20px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HTTP Performance Evaluator</h1>
+        
+        <div class="benchmark-form">
+            <input type="text" id="urlInput" placeholder="Enter URL (e.g., https://www.youtube.com)">
+            <input type="number" id="repeatCount" value="3" min="1" max="10">
+            <button onclick="runBenchmark()" class="benchmark-btn">Start Benchmark</button>
+        </div>
+
+        <div class="visualization-section">
+            <div class="loader-container" id="loaderContainer" style="display: none;">
+                <div class="loader"></div>
+                <p>Running benchmark...</p>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+
+        <div id="resultText" class="results-section"></div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+let performanceChart = null;
+
+function initializeChart() {
+    const chartCanvas = document.getElementById('performanceChart');
+    if (!chartCanvas) {
+        console.error('Chart canvas element not found');
+        return;
+    }
+
+    const ctx = chartCanvas.getContext('2d');
+    performanceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['HTTP/1.1', 'HTTP/2'],
+            datasets: [{
+                label: 'Response Time (seconds)',
+                data: [0, 0],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(75, 192, 192, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Response Time (seconds)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function runBenchmark() {
+    const loaderContainer = document.getElementById('loaderContainer');
+    const resultText = document.getElementById('resultText');
+    const urlInput = document.getElementById('urlInput').value;
+    const repeatCount = document.getElementById('repeatCount').value;
+
+    // Show loader
+    loaderContainer.style.display = 'flex';
+    resultText.innerHTML = '';
+
+    try {
+        const response = await fetch('/benchmark', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                url: urlInput,
+                repeat: parseInt(repeatCount)
+            })
+        });
+
+        const data = await response.json();
+
+        // Calculate averages
+        const http1Avg = data['HTTP/1.1'].reduce((a, b) => a + b, 0) / data['HTTP/1.1'].length;
+        const http2Avg = data['HTTP/2'].reduce((a, b) => a + b, 0) / data['HTTP/2'].length;
+
+        // Update chart
+        performanceChart.data.datasets[0].data = [http1Avg, http2Avg];
+        performanceChart.update();
+
+        // Display results
+        resultText.innerHTML = `
+            <h3>Detailed Results:</h3>
+            <p>HTTP/1.1: Average: ${http1Avg.toFixed(3)}s (${data['HTTP/1.1'].length} successful requests)</p>
+            <p>HTTP/2: Average: ${http2Avg.toFixed(3)}s (${data['HTTP/2'].length} successful requests)</p>
+        `;
+    } catch (error) {
+        resultText.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+    } finally {
+        loaderContainer.style.display = 'none';
+    }
+}
+
+// Initialize chart when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure the canvas exists before initializing
+    const chartCanvas = document.getElementById('performanceChart');
+    if (chartCanvas) {
+        initializeChart();
+    } else {
+        console.error('Performance chart canvas not found');
+    }
+});
+    </script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HTTP Performance Evaluator</title>
+    <!-- Load Chart.js from CDN with specific version -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>HTTP Performance Evaluator</h1>
+        
+        <div class="input-section">
+            <form id="benchmarkForm">
+                <label for="urlInput">URL:</label>
+                <input type="text" id="urlInput" placeholder="Enter URL (e.g., www.example.com)" required />
+                
+                <label for="repeatCount">Number of Requests:</label>
+                <input type="number" id="repeatCount" value="3" min="1" max="10" required />
+                
+                <button type="submit">Start Benchmark</button>
+            </form>
+        </div>
+
+        <div class="results-section">
+            <h2>Benchmark Results</h2>
+            <!-- Fixed height for chart container -->
+            <div class="chart-container" style="position: relative; height:400px; width:100%">
+                <canvas id="resultsChart"></canvas>
+            </div>
+            <div id="resultText"></div>
+        </div>
+    </div>
+
+    <!-- Create a separate initialization script -->
+    <script>
+        // Ensure Chart.js is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize empty chart
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            window.benchmarkChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['HTTP/2', 'HTTP/3'],
+                    datasets: [{
+                        label: 'Response Time (seconds)',
+                        data: [0, 0],
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.5)',
+                            'rgba(255, 99, 132, 0.5)'
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Response Time (seconds)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Form submission handler
+            document.getElementById('benchmarkForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (typeof runBenchmark === 'function') {
+                    runBenchmark();
+                } else {
+                    console.error('runBenchmark function not found');
+                }
+            });
+        });
+    </script>
+    
+    <!-- Load your dashboard.js last -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

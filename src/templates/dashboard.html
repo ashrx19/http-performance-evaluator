@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Performance Evaluator Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/chart-config.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+</head>
+<body>
+    <div class="container">
+        <h1>HTTP Performance Evaluator Dashboard</h1>
+        <form id="benchmark-form">
+            <label for="url">Enter URL:</label>
+            <input type="text" id="url" name="url" required>
+            <button type="submit">Start Benchmark</button>
+        </form>
+        <div id="alert" class="alert" style="display: none;"></div>
+        <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+        </div>
+        <div class="metrics">
+            <h2>Performance Metrics</h2>
+            <p id="http1-metric">HTTP/1.1 Average Time: <span id="http1-time">N/A</span></p>
+            <p id="http2-metric">HTTP/2 Average Time: <span id="http2-time">N/A</span></p>
+        </div>
+    </div>
+</body>
+</html>
